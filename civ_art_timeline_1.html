@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>문명 & 미술사 타임라인</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0e0c10;color:#e8e4d8;font-family:'Noto Sans KR',sans-serif;font-size:13px;line-height:1.6;-webkit-text-size-adjust:100%}
+
+/* ── 상단 탭바 ── */
+.topbar{position:sticky;top:0;z-index:200;background:#0a0808}
+.topbar-inner{padding:10px 14px 0}
+.topbar h1{font-family:'Noto Serif KR',serif;font-size:14px;color:#f5d060;font-weight:700}
+.filter-row{display:flex;overflow-x:auto;margin-top:8px;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:4px}
+.filter-row::-webkit-scrollbar{display:none}
+.ftab{flex-shrink:0;padding:8px 14px;font-size:12px;color:rgba(255,255,255,.45);cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;transition:all .15s;font-weight:700;background:transparent;border-top:none;border-left:none;border-right:none;font-family:'Noto Sans KR',sans-serif}
+.ftab.on{color:#f5d060;border-bottom-color:#f5d060}
+
+/* ── 패널 공통 ── */
+.panel{display:none;height:calc(100vh - 54px);overflow-y:auto}
+.panel.active{display:block}
+
+/* ── 모달 ── */
+.mo-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:500;align-items:flex-end;justify-content:center}
+.mo-ov.on{display:flex}
+.mo-sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:6px 0 36px;position:relative;box-shadow:0 -4px 24px rgba(0,0,0,.18)}
+.mo-handle{width:42px;height:4px;background:#e0d4c0;border-radius:2px;margin:12px auto 14px}
+.mo-close{position:absolute;top:10px;right:14px;background:#f5f2ec;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#7a6040;z-index:10}
+.mo-body{padding:0 18px}
+
+/* 모달 — 책 스타일 */
+.mo-book .mo-cat-badge{background:#d4a030;color:#fff}
+.mo-war  .mo-cat-badge{background:#c03020;color:#fff}
+.mo-sajo .mo-cat-badge{background:#7040c0;color:#fff}
+.mo-cat-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:8px;margin-bottom:6px;background:#888;color:#fff}
+.mo-yr{font-size:11px;font-weight:700;color:#8a6030;margin-bottom:5px}
+.mo-title{font-family:'Noto Serif KR',serif;font-size:18px;font-weight:700;line-height:1.4;margin-bottom:5px}
+.mo-sub{font-size:12px;color:#4a4a4a;margin-bottom:8px}
+.mo-war-tag{font-size:12.5px;color:#c04010;background:#fff5f0;border-radius:6px;padding:5px 11px;margin-bottom:10px;display:inline-block;font-weight:600}
+.mo-desc{border-left:4px solid;border-radius:0 8px 8px 0;padding:10px 13px;font-size:13.5px;line-height:1.75;margin-bottom:12px;font-weight:500}
+.mo-book .mo-desc{border-color:#d4a030;background:#fffbf0;color:#3a2010}
+.mo-war  .mo-desc{border-color:#c03020;background:#fff5f2;color:#3a1010}
+.mo-sajo .mo-desc{border-color:#7040c0;background:#f8f4ff;color:#2a1060}
+.mo-other .mo-desc{border-color:#888;background:#f8f5ef;color:#2a1a10}
+.mo-bullets{margin-bottom:10px}
+.mo-b{font-size:13px;color:#2a1a10;line-height:1.75;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.05)}
+.mo-b:last-child{border-bottom:none}
+.mo-b.bullet-📖{color:#5a3800}
+.mo-b.bullet-💬{color:#1a4080}
+.mo-b.bullet-💡{color:#1a6040}
+.mo-b.bullet-⚔{color:#7a1010}
+.mo-b.bullet-⚠{color:#8a5000}
+.mo-b.bullet-🔗{color:#306080}
+.mo-b.bullet-📅{color:#606060}
+.mo-quote{border:1px solid #d8b850;border-radius:9px;padding:12px 14px;font-family:'Noto Serif KR',serif;font-size:13px;line-height:1.8;font-style:italic;margin-top:10px}
+.mo-book .mo-quote{background:#fffbf0;color:#5a3800}
+.mo-war  .mo-quote{background:#fff5f0;color:#5a1810;border-color:#e08060}
+.mo-sajo .mo-quote{background:#f8f4ff;color:#3a1080;border-color:#b090e0}
+.mo-other .mo-quote{background:#fffbf0;color:#5a3800}
+
+/* ── 검색 결과 ── */
+.sr-outer{display:none;padding:12px 10px 90px}
+.sr-info{font-size:12px;color:#8a7060;margin-bottom:10px}
+.no-result{text-align:center;padding:50px 20px;color:#9a8060;font-size:13px;line-height:1.8}
+
+
+/* ── 스크롤 탑 ── */
+.scroll-top{position:fixed;right:14px;bottom:50px;width:38px;height:38px;background:#c08030;color:#fff;border:none;border-radius:50%;font-size:16px;cursor:pointer;z-index:101;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.scroll-top.show{display:flex}
+
+/* ── 사조 도트 ── */
+.sajo-dot{width:11px;height:11px;border-radius:50%;border:2.5px solid #9060d0;background:#f8f0ff}
+.script-link{color:#1060c0;text-decoration:underline;cursor:pointer;font-weight:700;font-size:11.5px;background:#f0f5ff;border-radius:3px;padding:1px 4px;display:inline-block;margin:0 2px}
+.script-link:hover{background:#dce8ff}
+
+/* 책 동양(east) */
+.book-east{background:linear-gradient(135deg,#fff9f0,#fff4e0)!important;border-color:#c87820!important}
+.book-east::before{background:linear-gradient(90deg,#e08820,#c06010,#e08820)!important}
+/* 책 서양(west) */
+.book-west{background:linear-gradient(135deg,#f8f8ff,#f0f2ff)!important;border-color:#7090c0!important}
+.book-west::before{background:linear-gradient(90deg,#8090d0,#5060a0,#8090d0)!important}
+/* 사조 동양 */
+.sajo-east{background:linear-gradient(135deg,#fff8f0,#fff3e8)!important;border:1.5px solid #d07830!important}
+.sajo-east .sajo-title{color:#8a4800!important}
+/* 사조 서양 */
+.sajo-west{background:linear-gradient(135deg,#f0f4ff,#eaf0ff)!important;border:1.5px solid #4060c0!important}
+.sajo-west .sajo-title{color:#1a3890!important}
+/* 배지 */
+.orient-badge{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:5px;vertical-align:middle}
+.badge-east{background:#fff0d8;color:#a06000;border:1px solid #d09030}
+.badge-west{background:#e8eeff;color:#2040a0;border:1px solid #6080d0}
+/* 전쟁 동서양 */
+.war-east{background:linear-gradient(135deg,#fff5e8,#ffeedd)!important;border:1.5px solid #c07030!important}
+.war-east .war-title{color:#7a3010!important}
+/* 국가별 */
+.ev-japan{border-left:3px solid #c02020!important}
+.ev-france{border-left:3px solid #4060c0!important}
+.ev-germany{border-left:3px solid #306030!important}
+.ev-uk{border-left:3px solid #00035b!important}
+
+/* ── 특수 탭 패널 ── */
+.special-panel{display:none;overflow-y:auto;padding-bottom:80px}
+.special-panel.active{display:block}
+/* era panel overrides */
+.era-panel{background:#f7f4ee}
+/* cosmos panel */
+.cosmos-panel{background:#070b14;color:#e8e4d8}
+@keyframes twinkle{0%,100%{opacity:.2}50%{opacity:.9}}
+
+
+/* ── cosmos panel styles ── */
+
+#cosmosPanel .page{max-width:480px;margin:0 auto;padding:0 0 80px}
+
+/* 내비 */
+#cosmosPanel .nav{background:#0d1220;padding:9px 14px;display:flex;gap:7px;overflow-x:auto;border-bottom:1px solid #1e2a40;scrollbar-width:none;position:sticky;top:0;z-index:100}
+#cosmosPanel .nav::-webkit-scrollbar{display:none}
+#cosmosPanel .nav a{flex-shrink:0;padding:6px 12px;border-radius:7px;font-size:11.5px;font-weight:700;text-decoration:none;white-space:nowrap;transition:all .15s}
+#cosmosPanel .nav-active{background:rgba(100,160,255,.2);color:#90c0ff;border:1px solid rgba(100,160,255,.4)}
+#cosmosPanel .nav-normal{background:rgba(255,255,255,.07);color:#a0b0c0;border:1px solid rgba(255,255,255,.1)}
+#cosmosPanel .nav-gold{background:rgba(240,192,64,.12);color:#f5d060;border:1px solid rgba(240,192,64,.3)}
+
+/* 헤더 */
+#cosmosPanel .hdr{background:linear-gradient(180deg,#0a0e1a 0%,#0f1828 60%,#070b14);padding:20px 16px 18px;position:relative;overflow:hidden}
+#cosmosPanel .hdr::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(60,100,200,.15) 0%,transparent 70%)}
+#cosmosPanel .stars{position:absolute;inset:0;pointer-events:none}
+#cosmosPanel .star{position:absolute;border-radius:50%;background:#fff;animation:twinkle 3s infinite}
+@keyframes twinkle{0%,100%{opacity:.3}50%{opacity:1}}
+#cosmosPanel .hdr-content{position:relative;z-index:2}
+#cosmosPanel .hdr h1{font-family:'Noto Serif KR',serif;font-size:20px;color:#c0d8ff;font-weight:700;line-height:1.4;margin-bottom:6px}
+#cosmosPanel .hdr h2{font-size:13px;color:#8aA0c0;font-style:italic;margin-bottom:12px}
+#cosmosPanel .hdr-stat{background:rgba(60,100,200,.15);border:1px solid rgba(100,160,255,.25);border-radius:9px;padding:12px 14px;margin-bottom:4px}
+#cosmosPanel .hdr-stat p{font-size:12.5px;color:#a0b8d8;line-height:1.75}
+#cosmosPanel .hdr-stat b{color:#c0d8ff}
+#cosmosPanel .hdr-stat em{color:#f5d060;font-style:normal;font-weight:700}
+
+/* 전환 안내 */
+#cosmosPanel .bridge-box{background:linear-gradient(135deg,#0d1a10,#0a1410);border:1px solid #204030;border-radius:10px;padding:13px 16px;margin:14px 12px;text-align:center}
+#cosmosPanel .bridge-box p{font-size:12.5px;color:#80b090;line-height:1.75}
+#cosmosPanel .bridge-box b{color:#90e0a0}
+#cosmosPanel .bridge-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:rgba(80,200,120,.12);border:1px solid rgba(80,200,120,.35);border-radius:8px;padding:8px 14px;color:#80e0a0;font-size:12px;font-weight:700;text-decoration:none}
+
+/* 섹션 제목 */
+#cosmosPanel .sec-title{font-family:'Noto Serif KR',serif;font-size:14px;font-weight:700;color:#8ab0e0;padding:10px 16px 6px;display:flex;align-items:center;gap:7px}
+
+/* 이벤트 카드 */
+#cosmosPanel .ev-row{display:flex;align-items:flex-start;margin:0 12px 9px;gap:0}
+#cosmosPanel .ev-left{width:82px;flex-shrink:0;text-align:right;padding-right:10px;padding-top:9px;position:relative}
+#cosmosPanel .ev-date{font-size:9.5px;font-weight:700;color:#5070a0;line-height:1.3;white-space:pre-line;text-align:right}
+#cosmosPanel .ev-dot{position:absolute;right:-5px;top:12px;width:9px;height:9px;border-radius:50%;border:2px solid;z-index:3}
+#cosmosPanel .ev-card{flex:1;border-radius:9px;padding:9px 12px;border:1px solid;margin-left:12px;cursor:pointer;transition:all .15s}
+#cosmosPanel .ev-card:active{filter:brightness(1.1)}
+#cosmosPanel .ev-title{font-size:13px;font-weight:700;line-height:1.35;margin-bottom:2px}
+#cosmosPanel .ev-desc{font-size:11.5px;line-height:1.65}
+#cosmosPanel .ev-detail{display:none;margin-top:8px;border-top:1px solid rgba(255,255,255,.08);padding-top:8px}
+#cosmosPanel .ev-detail.open{display:block}
+#cosmosPanel .ev-detail p{font-size:11.5px;line-height:1.75}
+#cosmosPanel .ev-hint{font-size:10px;font-weight:600;margin-top:5px;opacity:.6}
+
+/* 세로선 */
+#cosmosPanel .tl-line{position:absolute;left:82px;top:0;bottom:0;width:1.5px;z-index:0;pointer-events:none}
+#cosmosPanel .tl-outer{position:relative}
+
+/* 12월 31일 특별 섹션 */
+#cosmosPanel .dec31-banner{background:linear-gradient(135deg,#1a0a0a,#200d10);border:1px solid #5a1020;border-radius:11px;margin:14px 12px 10px;padding:14px 15px}
+#cosmosPanel .dec31-title{font-family:'Noto Serif KR',serif;font-size:15px;font-weight:700;color:#ff8090;margin-bottom:8px}
+#cosmosPanel .dec31-sub{font-size:12px;color:#c07080;margin-bottom:10px;line-height:1.7}
+#cosmosPanel .clock-display{background:#0a0808;border:1px solid #3a0a12;border-radius:8px;padding:10px 14px;font-family:'Courier New',monospace;font-size:18px;color:#ff6070;letter-spacing:2px;text-align:center;margin-bottom:10px}
+#cosmosPanel .last-mins-list{display:flex;flex-direction:column;gap:5px}
+#cosmosPanel .lm-item{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,100,120,.15);background:rgba(255,50,70,.05)}
+#cosmosPanel .lm-time{font-family:'Courier New',monospace;font-size:11px;color:#ff8090;flex-shrink:0;margin-right:10px}
+#cosmosPanel .lm-event{font-size:11.5px;color:#d0a0a8;flex:1}
+#cosmosPanel .lm-special{border-color:rgba(240,192,64,.35)!important;background:rgba(240,192,64,.07)!important}
+#cosmosPanel .lm-special .lm-time{color:#f5d060}
+#cosmosPanel .lm-special .lm-event{color:#e8d08a}
+
+/* 줌 인 레이블 */
+#cosmosPanel .zoom-label{text-align:center;font-size:11px;color:#4a5a70;margin:6px 0;letter-spacing:.5px}
+
+/* 색상 시스템 */
+#cosmosPanel .c-bigbang{border-color:#8060ff40;background:rgba(120,80,255,.08);color:#a080ff}
+#cosmosPanel .d-bigbang{border-color:#8060ff}
+#cosmosPanel .c-galaxy{border-color:#4060c040;background:rgba(60,80,200,.08);color:#7090e0}
+#cosmosPanel .d-galaxy{border-color:#4060c0}
+#cosmosPanel .c-solar{border-color:#c0802040;background:rgba(200,120,20,.08);color:#e0a040}
+#cosmosPanel .d-solar{border-color:#c08020}
+#cosmosPanel .c-earth{border-color:#4090c040;background:rgba(40,140,200,.08);color:#60b0e0}
+#cosmosPanel .d-earth{border-color:#4090c0}
+#cosmosPanel .c-life{border-color:#40a06040;background:rgba(40,160,80,.08);color:#60c080}
+#cosmosPanel .d-life{border-color:#40a060}
+#cosmosPanel .c-dino{border-color:#80a04040;background:rgba(120,160,40,.08);color:#a0c060}
+#cosmosPanel .d-dino{border-color:#80a040}
+#cosmosPanel .c-extinct{border-color:#c0502040;background:rgba(200,60,20,.08);color:#e07050}
+#cosmosPanel .d-extinct{border-color:#c05020}
+#cosmosPanel .c-human{border-color:#e0c06040;background:rgba(220,180,60,.08);color:#f0d070}
+#cosmosPanel .d-human{border-color:#e0c060}
+
+/* 하단 범례/CTA */
+#cosmosPanel .bottom-bar{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#0d1220;border-top:1px solid #1e2a40;padding:9px 14px;display:flex;gap:8px;z-index:100}
+#cosmosPanel .bb-btn{flex:1;padding:10px 6px;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px;font-family:'Noto Sans KR',sans-serif;border:none;cursor:pointer}
+#cosmosPanel .bb-main{background:linear-gradient(135deg,rgba(60,100,200,.4),rgba(40,80,160,.4));color:#90c0ff;border:1px solid rgba(100,160,255,.3)}
+#cosmosPanel .bb-gold{background:rgba(240,192,64,.1);color:#f5d060;border:1px solid rgba(240,192,64,.25)}
+
+/* 철기시대 전환 노트 */
+.iron-note{background:#241408;border-left:3px solid #a06030;border-radius:0 6px 6px 0;margin:6px 12px;padding:6px 12px;font-size:11px;color:#c08050;line-height:1.5}
+
+/* 미술사 패널 */
+
+/* ── 문명 CSS ── */
+.civ-panel-wrap{background:#0a1018;color:#e8eaf0}
+.civ-era-band{position:relative;margin:10px 8px 4px;border-radius:10px;overflow:hidden;cursor:pointer;border:1px solid rgba(255,255,255,.07)}
+.civ-era-inner{display:flex;align-items:stretch}
+.civ-era-left{width:54px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px}
+.civ-era-right{flex:1;padding:9px 12px}
+.civ-era-name{font-family:'Noto Serif KR',serif;font-size:13px;font-weight:700}
+.civ-era-period{font-size:9.5px;opacity:.65;margin-top:1px}
+.civ-era-desc{font-size:11.5px;line-height:1.7;margin-top:7px;display:none;padding-top:7px;border-top:1px solid rgba(255,255,255,.1)}
+.civ-era-band.open .civ-era-desc{display:block}
+.civ-row{display:flex;align-items:flex-start;margin-bottom:7px;padding:0 10px 0 0;position:relative}
+.civ-yr{width:58px;flex-shrink:0;text-align:right;padding-right:10px;padding-top:9px;font-size:9px;font-weight:700;color:#7090a0;line-height:1.3;white-space:pre-line}
+.civ-dot{width:16px;flex-shrink:0;display:flex;justify-content:center;padding-top:11px}
+.civ-dot-i{width:10px;height:10px;border-radius:50%;border:2px solid #3a6080;background:#0a1018}
+.civ-card{flex:1;margin-left:7px;background:rgba(255,255,255,.04);border:1px solid rgba(100,160,200,.18);border-radius:10px;padding:9px 11px 8px;cursor:pointer;transition:background .15s}
+.civ-card:active{background:rgba(255,255,255,.09)}
+.civ-card-region{font-size:9.5px;font-weight:700;margin-bottom:3px;opacity:.75}
+.civ-card-title{font-family:'Noto Serif KR',serif;font-size:13.5px;font-weight:700;line-height:1.35;margin-bottom:3px}
+.civ-card-sub{font-size:10px;opacity:.6;margin-bottom:4px}
+.civ-card-desc{font-size:11.5px;line-height:1.6;opacity:.85}
+.civ-card-hint{font-size:9px;opacity:.4;margin-top:5px}
+
+/* ── 미술사 CSS ── */
+.art-panel-wrap{background:#0e0c08;color:#e8e4d8}
+.art-era-band{position:relative;margin:10px 8px 4px;border-radius:10px;overflow:hidden;cursor:pointer;border:1px solid rgba(255,255,255,.07)}
+.art-era-inner{display:flex;align-items:stretch;min-height:44px}
+.art-era-left{width:40px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px}
+.art-era-right{flex:1;padding:7px 12px}
+.art-era-name{font-family:'Noto Serif KR',serif;font-size:12px;font-weight:700}
+.art-era-period{font-size:9.5px;opacity:.7;margin-top:1px}
+.art-era-desc{font-size:11px;line-height:1.55;margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.1);display:none;opacity:.85}
+.art-era-band.open .art-era-desc{display:block}
+.art-row{display:flex;align-items:flex-start;padding:3px 8px 3px 0}
+.art-yr{width:52px;flex-shrink:0;text-align:right;padding-right:8px;padding-top:10px;font-size:9.5px;color:#a09060;font-weight:700;line-height:1.3}
+.art-dot{width:20px;flex-shrink:0;display:flex;justify-content:center;padding-top:13px}
+.art-dot-i{width:9px;height:9px;border-radius:50%;border:2px solid #d4a030;background:#fffbf0}
+.art-card{flex:1;margin:3px 8px 3px 5px;border-radius:9px;padding:9px 12px;cursor:pointer;transition:opacity .15s}
+.art-card:active{opacity:.8}
+.art-card-cat{display:inline-block;font-size:8.5px;font-weight:700;padding:2px 5px;border-radius:5px;margin-bottom:4px}
+.art-card-title{font-family:'Noto Serif KR',serif;font-size:13px;font-weight:700;line-height:1.4;margin-bottom:2px}
+.art-card-sub{font-size:10px;opacity:.6;margin-bottom:3px}
+.art-card-desc{font-size:11px;opacity:.75;line-height:1.5}
+.art-card-hint{font-size:9.5px;margin-top:5px;opacity:.5}
+.art-cat-painting{background:#fffbf0;border:1.5px solid #d4a030;color:#3a2000}
+.art-cat-painting .art-card-cat{background:#fff0c0;color:#8a5000}
+.art-cat-sculpture{background:#f8f4ff;border:1.5px solid #9060d0;color:#2a1060}
+.art-cat-sculpture .art-card-cat{background:#e8d8ff;color:#6030b0}
+.art-cat-architecture{background:#f0fff4;border:1.5px solid #30a060;color:#003a20}
+.art-cat-architecture .art-card-cat{background:#c0f0d8;color:#006030}
+.art-cat-installation{background:#f0f8ff;border:1.5px solid #3080d0;color:#001a50}
+.art-cat-installation .art-card-cat{background:#c8e8ff;color:#0040a0}
+.art-cat-street{background:#fff0f8;border:1.5px solid #d030a0;color:#500030}
+.art-cat-street .art-card-cat{background:#ffc8ec;color:#a00060}
+</style>
+</head>
+<body>
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <h1>🌍 문명 &amp; 🎨 미술사 타임라인</h1>
+  </div>
+  <div class="filter-row">
+    <button class="ftab on" onclick="switchTab('civ',this)">🏛 문명</button>
+    <button class="ftab" onclick="switchTab('art',this)">🎨 미술사</button>
+  </div>
+</div>
+
+<!-- 문명 패널 -->
+<div id="civPanel" class="panel civ-panel-wrap">
+  <div style="background:#060e18;border-bottom:2px solid #2a6080;padding:10px 16px 10px;position:sticky;top:0;z-index:10">
+    <div style="font-family:'Noto Serif KR',serif;font-size:14px;font-weight:700;color:#7ec8e3">🏛 세계 문명 타임라인</div>
+    <div style="font-size:10.5px;color:#6090a0;margin-top:3px">메소포타미아 BCE 3500 ~ 현재 · 인류 문명의 탄생·전성·소멸</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:9.5px">
+      <span style="color:#c8a040">🌾 농경</span>
+      <span style="color:#e08040">🏙 도시</span>
+      <span style="color:#a060d0">👑 왕조</span>
+      <span style="color:#40a070">🔬 과학</span>
+      <span style="color:#e04040">⚔ 정복·소멸</span>
+    </div>
+  </div>
+  <div style="position:relative;padding:6px 0 80px">
+    <div style="position:absolute;left:62px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,transparent,#1a3a50 40px,#1a3a50 calc(100% - 40px),transparent)"></div>
+    <div id="civBody"></div>
+  </div>
+</div>
+
+<!-- 미술사 패널 -->
+<div id="artPanel" class="panel art-panel-wrap">
+  <div style="background:#1a1200;border-bottom:2px solid #c07020;padding:10px 16px 10px;position:sticky;top:0;z-index:10">
+    <div style="font-family:'Noto Serif KR',serif;font-size:14px;font-weight:700;color:#f5d060">🎨 미술사 타임라인</div>
+    <div style="font-size:10.5px;color:#a09060;margin-top:3px">선사시대 BCE 38,000 ~ 현대 · 주요 작품·작가·사조 시대순</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;font-size:9.5px;color:#a09060">
+      <span>🖼 회화</span><span style="color:#9060d0">🗿 조각</span>
+      <span style="color:#30a060">🏗 건축</span><span style="color:#3080d0">💡 설치·개념</span>
+      <span style="color:#d030a0">🎭 거리·디지털</span>
+    </div>
+  </div>
+  <div style="position:relative;padding:6px 0 80px">
+    <div style="position:absolute;left:62px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,transparent,#3a3020 40px,#3a3020 calc(100% - 40px),transparent)"></div>
+    <div id="artBody"></div>
+  </div>
+</div>
+
+<div class="mo-ov" id="moOv" onclick="closeMo(event)">
+  <div class="mo-sheet">
+    <div class="mo-handle"></div>
+    <button class="mo-close" onclick="closeMo()">✕</button>
+    <div class="mo-body" id="moBody"></div>
+  </div>
+</div>
+
+<script>
+// ── 탭 전환 ──
+let civInited=false, artInited=false;
+function switchTab(name, btn){
+  document.querySelectorAll('.ftab').forEach(t=>t.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(name+'Panel').classList.add('active');
+  if(name==='civ'&&!civInited){civInited=true;initCivPanel();}
+  if(name==='art'&&!artInited){artInited=true;initArtPanel();}
+}
+
+// ── 모달 닫기 ──
+function closeMo(e){
+  if(e&&e.target!==document.getElementById('moOv'))return;
+  document.getElementById('moOv').classList.remove('on');
+  document.body.style.overflow='';
+}
+
+// ════ 문명 패널 ════
+const CIV_ERAS=[
+  {id:'ancient-river',label:'고대 강변 문명',period:'BCE 3500 ~ 500',color:'#c8a040',icon:'🌊',
+   desc:'큰 강 유역에서 인류 최초의 도시·문자·국가가 탄생했다. 티그리스·유프라테스(메소포타미아), 나일(이집트), 인더스, 황하. 강이 없었다면 문명도 없었다.'},
+  {id:'east-asia',label:'동아시아 문명',period:'BCE 2300 ~ 현재',color:'#e07030',icon:'🐉',
+   desc:'황하·장강 유역에서 시작된 중화 문명과 한반도·일본으로 이어지는 동아시아 문명권. 한자·유교·불교가 공통 기반.'},
+  {id:'korean',label:'한국 고대 문명',period:'BCE 2333 ~ 918 CE',color:'#d04060',icon:'🇰🇷',
+   desc:'고조선·삼한·삼국·통일신라·발해. 반도라는 지리적 특성 위에 중국·유목민·일본과 끊임없이 교류하며 독자 문화를 형성한 한반도 문명.'},
+  {id:'classical',label:'고전 문명',period:'BCE 900 ~ 500 CE',color:'#6080d0',icon:'🏛',
+   desc:'그리스·로마·페르시아. 민주주의·철학·법·건축의 원형. 현재 서양 문명의 직접 조상.'},
+  {id:'americas',label:'아메리카 문명',period:'BCE 2000 ~ 1600 CE',color:'#50a860',icon:'🌽',
+   desc:'올멕·마야·아즈텍·잉카. 유라시아와 완전히 독립적으로 발전한 문명들. 철기 없이, 말 없이, 바퀴(실용적 용도) 없이도 웅장한 문명을 건설했다.'},
+  {id:'medieval-civ',label:'중세 문명권',period:'500 ~ 1500 CE',color:'#8040a0',icon:'🕌',
+   desc:'이슬람 황금기·비잔틴·중세 유럽·몽골 제국. 문명의 중심이 이동하고 교류하는 시대.'},
+];
+
+const CIV_EV=[
+  {y:-3500,era:'ancient-river',region:'메소포타미아 🌊',t:`수메르 문명`,s:`티그리스·유프라테스강 유역 (현 이라크)`,
+   d:`인류 최초의 도시문명. 문자·도시·법·바퀴의 발명.`,
+   b:[`📅 BCE 3500~2000년경`,`🏙 우루크·우르·라가쉬 등 최초의 도시국가. 인구 5만 명 초과 도시 등장`,`📝 쐐기문자(Cuneiform) BCE 3200년경 — 인류 최초의 문자. 점토판에 갈대 펜으로 기록`,`🔢 60진법(1시간=60분, 원=360도) 수학 체계`,`🛞 바퀴 발명 BCE 3500년경. 관개(물길 끌기) 농업으로 메마른 땅을 옥토로`,`⚖ 최초의 법: 우르남무 법전 BCE 2100년 — 함무라비 법전보다 300년 앞선 성문법`,`👑 최초의 왕: 길가메쉬 — 신화와 역사의 경계에 선 영웅왕`],
+   q:`인류가 처음 도시를 세우고
+처음 문자를 새겼던 땅.`},
+  {y:-2334,era:'ancient-river',region:'메소포타미아 🌊',t:`아카드 제국 — 세계 최초의 제국`,s:`사르곤 1세, BCE 2334~2154`,
+   d:`도시국가들을 통합한 인류 최초의 제국. 정복과 통치의 원형.`,
+   b:[`📅 BCE 2334~2154년 / 사르곤(Sargon) 1세 건국`,`👑 최초의 제국 건설자: 하층민 출신에서 왕으로. 26년간 정복 전쟁`,`🌍 메소포타미아·시리아·아나톨리아까지 지배. 최초의 중앙집권 행정 시스템`,`📝 아카드어가 국제 외교 언어로 2000년간 사용`,`💀 BCE 2154년 구티족 침입으로 붕괴`],
+   q:`"사르곤은 왕이었다.
+그러나 그는 누구의 아들인지 아무도 몰랐다."
+— 아카드 왕 연대기`},
+  {y:-1792,era:'ancient-river',region:'메소포타미아 🌊',t:`함무라비 법전 — 최초의 성문법`,s:`바빌론 제국 함무라비 왕, BCE 1792~1750`,
+   d:`"눈에는 눈, 이에는 이." 282개 조항. 법이 왕보다 먼저라는 원칙.`,
+   b:[`📅 BCE 1754년경 공포 / 함무라비(Hammurabi) 왕`,`⚖ 282개 조항: 재산·가족·노동·상업·형사법 망라`,`💬 핵심 원칙: 동태복수법(lex talionis) — 같은 신분끼리는 동등한 형벌`,`📌 신분별 차등 적용: 자유민·노예·귀족 구분. 완전한 평등법은 아님`,`🔗 현재 루브르 박물관 소장. 높이 2.25m 현무암 비석에 새겨짐`],
+   q:`"만약 사람이 다른 사람의 눈을 빼면
+그의 눈을 빼야 한다."
+— 함무라비 법전 196조`},
+  {y:-3100,era:'ancient-river',region:'이집트 🌅',t:`이집트 문명 통일 — 파라오의 탄생`,s:`나일강 유역, 나르메르 왕, BCE 3100`,
+   d:`나일강이 만든 문명. 4000년간 지속된 인류 역사상 가장 안정된 문명.`,
+   b:[`📅 BCE 3100년경 나르메르(Narmer) 왕이 상하이집트 통일`,`🌊 나일의 선물: 연 1회 범람 → 비옥한 흙 퇴적 → 잉여 농산물 → 피라미드 건설 가능`,`📝 상형문자(Hieroglyphics) BCE 3200년경 — 수메르와 거의 동시 발명`,`👁 마아트(Maat): 우주적 질서·정의·진실의 여신. 이집트 문명의 핵심 가치`,`⚗ 미라: 영혼이 돌아올 몸을 보존. 내장 4개를 단지에 따로 보관`],
+   q:`나일이 없으면 이집트도 없다.
+— 헤로도토스`},
+  {y:-2560,era:'ancient-river',region:'이집트 🌅',t:`기자 대피라미드·스핑크스`,s:`파라오 쿠푸·카프레, BCE 2560~2500`,
+   d:`146m 높이의 돌산. 4면이 동서남북과 오차 0.05도. 노예가 아닌 국가 고용 노동자.`,
+   b:[`📅 BCE 2560년경 쿠푸(Khufu) 왕 명령`,`🏗 돌 230만 블록, 평균 2.5톤. 최대 80톤 블록도 있음`,`👷 건설 인원: 약 2~3만 명 국가 고용 노동자. 맥주·빵 제공, 의료 지원 기록`,`🔭 정밀도: 4면이 정확히 동서남북. 오차 0.05도 미만`,`🦁 스핑크스: 높이 20m, 길이 73m. 카프레 왕의 얼굴로 추정`],
+   q:`시간은 모든 것을 두려워한다.
+하지만 피라미드는 시간을 두려워하지 않는다.`},
+  {y:-1351,era:'ancient-river',region:'이집트 🌅',t:`아마르나 혁명 — 세계 최초의 유일신`,s:`파라오 아크나톤, BCE 1351~1334`,
+   d:`수백 명의 신을 버리고 태양신 아톤 하나만 섬겼다. 모세의 유일신교보다 앞서.`,
+   b:[`📅 BCE 1351년경 / 파라오 아크나톤(Akhenaten)`,`☀ 아톤(Aten) 유일신 선포: 이집트 다신교 전통 전면 폐기. 사제 계급 타격`,`🎨 아마르나 양식: 파라오를 실제 외모로 묘사. 왜곡된 몸, 길쭉한 두상`,`💀 아크나톤 사후 투탕카멘이 원래 다신교로 복귀. 아마르나 기록 말살`,`🔗 프로이트: 모세가 아크나톤의 사제였다는 가설 (모세와 유일신교, 1939)`],
+   q:`인류가 처음으로 신이 하나라고 선언한 순간.
+역사는 이것을 잊으려 했지만 지울 수 없었다.`},
+  {y:-1279,era:'ancient-river',region:'이집트 🌅',t:`람세스 2세 — 이집트의 정점`,s:`BCE 1279~1213, 66년 재위`,
+   d:`가장 오래 재위한 파라오. 아부심벨 신전. 카데시 전투와 세계 최초의 평화조약.`,
+   b:[`📅 BCE 1279~1213년 / 람세스(Ramesses) 2세. 66년 재위`,`🏛 아부심벨 신전: 산을 깎아 만든 거대 신전. 20m 거상 4기`,`⚔ 카데시 전투(BCE 1274): 히타이트와 대전 → 무승부 → 세계 최초의 평화조약`,`👶 100명 이상의 자녀. 90세 이상 장수`,`🔗 투탕카멘 황금 마스크(BCE 1323)가 같은 시대`],
+   q:`자신의 모습을 돌에 새기고 싶다면
+람세스처럼 살아야 한다.`},
+  {y:-2600,era:'ancient-river',region:'인더스 🏺',t:`모헨조다로·하라파 — 계획도시 문명`,s:`인더스강 유역 (현 파키스탄), BCE 2600~1900`,
+   d:`4천 년 전에 이미 수세식 화장실과 격자형 도로망. 아직 해독 못 한 문자.`,
+   b:[`📅 BCE 2600~1900년경 전성기`,`🏙 모헨조다로(Mohenjo-daro): 인구 4~5만 명. 세계 최초의 계획도시`,`🚿 수세식 화장실·하수관·공중목욕탕 완비 — 고대 로마보다 2000년 앞서`,`📐 격자형 도로망: 동서남북으로 반듯한 도로. 근대 도시계획의 원형`,`❓ 인더스 문자 미해독: 400개 이상의 기호. 아직 해석 불가`,`🔥 BCE 1900년경 돌연 소멸: 원인 불명 (기후변화·아리아인 침입설 등)`],
+   q:`4000년 전 도시에 이미 수도가 있었다.
+우리는 발전했는가, 잊었는가?`},
+  {y:-2070,era:'east-asia',region:'중국 황하 🐉',t:`하(夏)·상(商)·주(周) — 중화 문명의 기원`,s:`황하 유역, BCE 2070~256`,
+   d:`한자·청동기·갑골문자. 중화 문명 3천 년의 뿌리.`,
+   b:[`📅 하(夏) BCE 2070~1600 / 상(商) BCE 1600~1046 / 주(周) BCE 1046~256`,`📝 갑골문(甲骨文): 상나라 점복(占卜) 기록. 한자의 직접 조상`,`🔔 청동기 문화: 정(鼎)·종(鍾) 등 정교한 청동 제기(祭器)`,`🌾 황하 홍수 다스리기: 우(禹) 임금의 치수 — 하나라 건국 신화의 핵심`,`📚 주(周)나라: 공자·노자·손자 등 제자백가의 시대. 봉건제 확립`],
+   q:`황하를 다스리는 자가 중원을 다스린다.`},
+  {y:-2333,era:'korean',region:'한국 고대 🇰🇷',t:`고조선 — 단군왕검의 건국`,s:`BCE 2333, 아사달 (현 평양 추정)`,
+   d:`단군왕검이 세운 한국 최초의 국가. 홍익인간(弘益人間) — 널리 인간을 이롭게 하라.`,
+   b:[`📅 건국 BCE 2333년 (삼국유사·삼국사기 기록)`,`🐻 단군 신화: 환웅이 곰 여인과 결혼 → 단군왕검 탄생. 신성 왕권의 원형`,`💡 홍익인간(弘益人間): 고조선의 건국 이념. 현재 대한민국 교육 이념`,`🏺 청동기 문화: 비파형 동검·고인돌(세계 최다 고인돌 보유)`,`📅 BCE 108년 한(漢) 무제의 침략으로 멸망. 한사군 설치`],
+   q:`"널리 인간을 이롭게 하라(弘益人間)"
+— 단군왕검의 건국 이념`},
+  {y:-300,era:'korean',region:'한국 고대 🇰🇷',t:`삼한 — 마한·진한·변한`,s:`한반도 남부, BCE 3세기~4세기 CE`,
+   d:`벼농사·철기·독자 문화. 삼국시대의 씨앗이 된 연맹체 사회.`,
+   b:[`📅 BCE 3세기 ~ 4세기 CE`,`🌾 마한(馬韓): 한반도 서남부. 54개 소국. 백제의 모태`,`⚔ 변한(弁韓): 철 생산 중심지. 낙랑·왜에 수출. 가야의 모태`,`🎵 진한(辰韓): 신라의 모태. 박혁거세 건국 신화`,`🔗 삼한의 제천행사: 5월·10월 공동체 축제 — 한국 공동체 문화의 원형`],
+   q:`삼한의 철이 낙랑과 왜로 수출되었다.
+한반도는 이미 국제 무역의 중심이었다.`},
+  {y:-57,era:'korean',region:'한국 고대 🇰🇷',t:`삼국시대 — 고구려·백제·신라`,s:`BCE 57 ~ 676 CE`,
+   d:`700년의 경쟁과 통합. 광개토대왕의 정복, 백제의 해상왕국, 신라의 통일.`,
+   b:[`📅 신라 BCE 57 / 고구려 BCE 37 / 백제 BCE 18 창건`,`🦅 고구려: 만주·한반도 북부. 광개토대왕(375~413) — 최전성기 영토 64만km². 수·당나라 침략 격퇴`,`🚢 백제: 한반도 서남부. 해상 실크로드 주역. 일본에 불교·한자·기와 전파`,`🌸 신라: 한반도 동남부. 화랑도·골품제. 676년 삼국통일`,`🏯 고구려 벽화: 무용총·각저총 — 당시 생활·사상 기록하는 독보적 사료`],
+   q:`고구려는 수나라 113만 대군을 막아냈다.
+살수대첩(612) — 을지문덕의 지략`},
+  {y:42,era:'korean',region:'한국 고대 🇰🇷',t:`가야 연맹 — 잊힌 철의 왕국`,s:`낙동강 유역, 42~562 CE`,
+   d:`삼국사에 가려진 철기 문명. 일본 고분 문화에 결정적 영향을 미친 해양국가.`,
+   b:[`📅 42~562 CE (신라에 병합)`,`⚙ 철의 왕국: 고품질 철 생산·수출. 낙랑·왜와 교역. 당시 동아시아 철 허브`,`🚢 해양 네트워크: 김해·고성을 거점으로 일본 열도와 직접 교역`,`🥁 수로왕 신화: 김수로왕과 인도 아유타국 공주 허황옥의 결혼 — 인도·한반도 교류의 상징`,`🔗 가야금: 가야 출신 악사 우륵이 신라에 전파 — 한국 전통음악의 핵심 악기`],
+   q:`철을 만드는 자가 역사를 만든다.
+가야는 잊혀졌지만 그 철은 남았다.`},
+  {y:676,era:'korean',region:'한국 고대 🇰🇷',t:`통일신라·발해 — 남북국시대`,s:`676~935 CE (신라) / 698~926 CE (발해)`,
+   d:`신라의 삼국통일과 발해의 건국. 한반도 역사상 가장 넓은 문화권.`,
+   b:[`📅 676년 신라 삼국통일 / 698년 대조영 발해 건국`,`🌸 통일신라: 불국사·석굴암(751). 신라방(당나라 교민촌). 장보고의 해상무역 제국`,`🐻 발해: 고구려 유민 + 말갈족. "해동성국(海東盛國)" — 당나라가 인정한 동방의 강국`,`📚 원효·의상·혜초: 불교 사상의 대중화. 혜초의 왕오천축국전 — 인도·중앙아시아 여행기`,`🔗 남북국시대: 신라(남)·발해(북)가 병립. 현재 남북 분단과 비교되는 역사 구도`],
+   q:`"해동성국(海東盛國)"
+동방의 번성한 나라 — 당나라가 발해에 붙인 칭호`},
+  {y:-800,era:'classical',region:'그리스 🏛',t:`그리스 폴리스 문명`,s:`에게해 일대, BCE 800~146`,
+   d:`민주주의·철학·올림픽·연극. 서양 문명의 DNA.`,
+   b:[`📅 BCE 800~146년 (로마에 정복됨)`,`🏙 폴리스(Polis: 도시국가): 아테네·스파르타·코린토스 등 수백 개. 각자 독립 정치체`,`🗳 아테네 민주주의 BCE 508년 클레이스테네스 개혁: 추첨제·도편추방제`,`🎭 비극·희극 탄생: 소포클레스 오이디푸스왕, 아리스토파네스 구름`,`🏋 올림픽 BCE 776년 최초 개최. 전쟁도 멈추는 신성한 대회`],
+   q:`"인간은 본질적으로 정치적 동물이다."
+— 아리스토텔레스`},
+  {y:-550,era:'classical',region:'페르시아 🦁',t:`아케메네스 페르시아 제국`,s:`키루스 2세, BCE 550~330`,
+   d:`역사상 최초의 관용 제국. 점령지 문화를 존중하고 노예를 해방한 키루스 대왕.`,
+   b:[`📅 BCE 550~330년 / 키루스(Cyrus) 2세 건국`,`🕊 최초의 인권선언: 키루스 실린더(BCE 539) — 바빌론 점령 후 노예 해방, 종교 자유 보장`,`🌍 영토: 이란·이라크·이집트·터키·인도 일부. 인류 역사상 최대 영토 중 하나`,`📮 왕의 길(Royal Road): 사르디스~수사 2700km. 역참제(릴레이 말 전령)`,`💀 BCE 330년 알렉산더 대왕에게 멸망. 다리우스 3세 도망 중 부하에게 살해`],
+   q:`"나는 노예를 해방한다. 나는 종교를 강요하지 않는다."
+— 키루스 실린더(BCE 539) — 최초의 인권 선언`},
+  {y:-27,era:'classical',region:'로마 🦅',t:`로마 제국 — 팍스 로마나`,s:`아우구스투스, BCE 27 ~ 476 CE`,
+   d:`"모든 길은 로마로 통한다." 법·건축·언어로 유럽의 뼈대를 만든 문명.`,
+   b:[`📅 BCE 27 아우구스투스 초대 황제 ~ 476 CE 서로마 멸망`,`🏛 팍스 로마나(Pax Romana·로마의 평화): BCE 27~180년 200년간 상대적 평화`,`⚖ 로마법: 만민법(Jus Gentium). 현대 유럽·라틴아메리카 법체계의 직접 조상`,`🏗 인프라: 총연장 8만km 도로망, 수도교, 콜로세움, 판테온`,`🗣 라틴어: 포르투갈·스페인·프랑스·이탈리아·루마니아어의 어머니`],
+   q:`"모든 길은 로마로 통한다"
+로마는 건물이 아니라 시스템이었다.`},
+  {y:-2000,era:'americas',region:'올멕 🌽',t:`올멕 — 메소아메리카의 어머니 문명`,s:`멕시코 걸프 연안, BCE 2000~400`,
+   d:`거대 석두(石頭). 마야·아즈텍 문명의 씨앗.`,
+   b:[`📅 BCE 2000~400년경`,`🗿 거대 두상: 높이 3m, 무게 40톤. 수십km 운반. 지배자 초상으로 추정`,`🎮 고무볼 게임(Tlachtli): 종교 의례. 패자가 희생 제물이 됐다는 설`,`📅 장기력(長期歷): 마야 달력의 원형. 천문 관측 기반의 정밀한 달력`,`💀 BCE 400년경 돌연 소멸. 화산 폭발·생태계 붕괴 등 원인 논쟁`],
+   q:`올멕이 없었다면 마야도 아즈텍도 없었다.
+하지만 우리는 그들의 이름조차 모른다.`},
+  {y:-300,era:'americas',region:'마야 🌽',t:`마야 문명 — 천문학의 제국`,s:`유카탄 반도·과테말라, BCE 300~1500 CE`,
+   d:`철기 없이, 바퀴 없이 만든 피라미드. 제로(0) 개념과 365.25일 달력.`,
+   b:[`📅 BCE 300~900년 전성기. 15세기까지 존속`,`🔭 천문학: 금성 주기 584일 정확히 계산. 일식 예측. 365.25일 달력 (현재 태양력과 동일)`,`0️⃣ 0(영)의 독자 발명: 인도와 거의 동시 또는 앞서. 수학의 혁명`,`🏙 티칼·팔렝케·치첸이트사: 울창한 정글 속 100만 인구 도시`,`📝 마야 문자: 2022년까지 약 80% 해독. 아직 완전히 읽지 못함`,`💀 900년경 남부 저지대 고전기 문명 붕괴: 가뭄·전쟁·내분 복합 원인`],
+   q:`그들은 별을 읽었다.
+우리는 그들이 쓴 것을 아직 다 읽지 못한다.`},
+  {y:1300,era:'americas',region:'아즈텍 🌽',t:`아즈텍 제국 — 태양의 민족`,s:`테노치티틀란 (현 멕시코시티), 1300~1521 CE`,
+   d:`인구 20만 호수 위의 수도. 초콜릿·토마토·옥수수의 고향. 1521년 스페인에 멸망.`,
+   b:[`📅 1300~1521 CE / 멕시코 고원`,`🏙 테노치티틀란: 호수 위 인공 섬 도시. 1519년 인구 약 20만 — 당시 유럽 최대 도시 런던(7만)보다 3배`,`🍫 초콜릿·토마토·고추·바닐라·옥수수: 세계 음식 문화의 혁명을 가져온 아즈텍 농산물`,`☀ 태양 달력: 365일 태양력 + 260일 의례력. 두 달력이 52년마다 일치하는 날 = 신세계 시작`,`💀 1519~1521 코르테스 + 천연두. 인구 1500만 → 100년 내 100만으로 감소`],
+   q:`"당신들이 황금을 굶주리듯 원하는 것을 나는 안다."
+— 목테수마 2세, 코르테스에게`},
+  {y:1400,era:'americas',region:'잉카 🌽',t:`잉카 제국 — 안데스의 태양`,s:`쿠스코 (현 페루), 1400~1533 CE`,
+   d:`문자 없이 키푸(결승문자)로 제국을 관리. 마추픽추. 1533년 스페인에 멸망.`,
+   b:[`📅 1438~1533 CE 전성기 / 쿠스코 수도`,`🏔 마추픽추(Machu Picchu): 해발 2430m 산 위의 도시. 정확한 석조 건축. 시멘트 없이 돌과 돌이 완벽히 맞물림`,`📊 키푸(Quipu): 색깔·매듭으로 정보 기록. 현재 해독 연구 중`,`🛣 잉카 도로망: 총 4만km. 북단 콜롬비아~남단 칠레. 산악 지형 극복`,`💀 1532~1533 피사로 168명 vs 잉카 8만 군대. 총기·말·천연두의 조합`],
+   q:`"우리는 하늘에서 내려왔다.
+태양이 우리 아버지이고 대지가 우리 어머니다."
+— 잉카 창세 신화`},
+  {y:750,era:'medieval-civ',region:'이슬람 황금기 🕌',t:`압바스 왕조 — 이슬람 황금기`,s:`바그다드, 750~1258 CE`,
+   d:`대수학·의학·천문학의 혁명. 그리스 고전을 살려 유럽 르네상스를 준비.`,
+   b:[`📅 750~1258 CE / 수도 바그다드 — 당시 세계 최대 도시 (인구 100~150만)`,`📚 지혜의 집: 그리스어·산스크리트어·페르시아어 문헌 아랍어 번역`,`➕ 대수학(Algebra): 알콰리즈미(al-Khwarizmi) — algebra·algorithm 두 단어 모두 그의 이름에서`,`🔭 천문학: 별 이름 3분의 1이 아랍어 (Aldebaran·Betelgeuse 등)`,`💊 이븐 시나 의학정전: 유럽 의대 18세기까지 교재`,`💀 1258년 몽골의 바그다드 약탈 — 도서관의 책으로 티그리스강이 검게 물들었다는 기록`],
+   q:`유럽이 중세의 어둠에 있을 때
+바그다드는 세계의 빛이었다.`},
+];
+
+let civPanelInited=false;
+function initCivPanel(){
+  if(civPanelInited)return;
+  civPanelInited=true;
+  const body=document.getElementById('civBody');
+  if(!body)return;
+  const sorted=[...CIV_EV].sort((a,b)=>a.y-b.y);
+  let html='',prevEra=null;
+  sorted.forEach((ev,i)=>{
+    const era=CIV_ERAS.find(r=>r.id===ev.era);
+    if(era&&era.id!==prevEra){
+      prevEra=era.id;
+      html+=`<div class="civ-era-band" onclick="this.classList.toggle('open')" style="background:${era.color}12;border-color:${era.color}40">
+        <div class="civ-era-inner">
+          <div class="civ-era-left" style="background:${era.color}18">${era.icon}</div>
+          <div class="civ-era-right">
+            <div class="civ-era-name" style="color:${era.color}">${era.label}</div>
+            <div class="civ-era-period" style="color:${era.color}">${era.period}</div>
+            <div style="font-size:9.5px;opacity:.45;color:${era.color};margin-top:2px">▼ 탭하면 시대 설명</div>
+            <div class="civ-era-desc" style="color:${era.color}">${era.desc}</div>
+          </div>
+        </div></div>`;
+    }
+    const dotC=era?era.color:'#3a8080';
+    const yr=ev.y<=-1000?`BCE\n${Math.abs(ev.y).toLocaleString()}`:ev.y<0?`기원전\n${Math.abs(ev.y)}`:ev.y+'년';
+    html+=`<div class="civ-row">
+      <div class="civ-yr">${yr}</div>
+      <div class="civ-dot"><div class="civ-dot-i" style="border-color:${dotC}"></div></div>
+      <div class="civ-card" onclick="openCivMo(${i})">
+        <div class="civ-card-region" style="color:${dotC}">${ev.region}</div>
+        <div class="civ-card-title">${ev.t}</div>
+        <div class="civ-card-sub">${ev.s}</div>
+        <div class="civ-card-desc">${ev.d}</div>
+        <div class="civ-card-hint">📖 탭하면 상세 보기</div>
+      </div></div>`;
+  });
+  body.innerHTML=html;
+}
+
+function openCivMo(idx){
+  const ev=CIV_EV[idx];if(!ev)return;
+  const era=CIV_ERAS.find(r=>r.id===ev.era);
+  const col=era?era.color:'#3a8080';
+  const yr=ev.y<=-1000?`BCE ${Math.abs(ev.y).toLocaleString()}`:ev.y<0?`기원전 ${Math.abs(ev.y)}년`:ev.y+'년';
+  let h=`<div style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:10.5px;font-weight:700;background:${col}22;color:${col};border:1px solid ${col}55;margin:12px 16px 4px">${ev.region}</div>`;
+  h+=`<div style="font-size:11px;color:${col};padding:0 16px 4px;font-weight:700">${yr}</div>`;
+  h+=`<div style="font-family:'Noto Serif KR',serif;font-size:17px;font-weight:700;padding:0 16px 6px;color:#1a1a1a;line-height:1.35">${ev.t}</div>`;
+  if(ev.s)h+=`<div style="font-size:11px;color:#4a5060;padding:0 16px 8px;font-weight:500">${ev.s}</div>`;
+  if(ev.d)h+=`<div style="font-size:13px;color:#1e1e1e;padding:8px 14px 10px;background:${col}0f;border-left:4px solid ${col};margin:0 12px 12px;border-radius:0 8px 8px 0;line-height:1.7;font-weight:500">${ev.d}</div>`;
+  if(ev.b&&ev.b.length){
+    h+=`<div style="padding:0 12px 12px">`;
+    ev.b.forEach(bi=>{h+=`<div style="font-size:12.5px;color:#1e1e1e;padding:6px 10px 5px;border-left:2px solid ${col}88;margin-bottom:5px;line-height:1.65;background:rgba(0,0,0,.03);border-radius:0 5px 5px 0">${bi}</div>`;});
+    h+=`</div>`;
+  }
+  if(ev.q)h+=`<div style="font-size:12.5px;color:#1e1e1e;background:${col}0f;border-left:3px solid ${col};padding:10px 14px;margin:4px 12px 12px;border-radius:0 8px 8px 0;line-height:1.75;white-space:pre-line;font-style:italic">${ev.q}</div>`;
+  document.getElementById('moBody').innerHTML=h;
+  document.getElementById('moOv').classList.add('on');
+  document.body.style.overflow='hidden';
+}
+
+// ════ 미술사 패널 ════
+// ════ 미술사 패널 ════
+const ART_ERAS=[
+  {id:'prehistoric',label:'선사시대 미술',period:'BCE 40000 ~ 3000',y1:-40000,y2:-3000,color:'#C4956A',bg:'#fff8f4',border:'#C4956A',icon:'🪨',desc:'동굴벽화와 조각상. 인류 최초의 예술적 표현. 실용을 넘어선 인간의 정신 세계.'},
+  {id:'ancient',label:'고대 미술',period:'BCE 3000 ~ 400 CE',y1:-3000,y2:400,color:'#D4A020',bg:'#fffbf0',border:'#D4A020',icon:'🏛',desc:'이집트·그리스·로마. 신과 권력을 위한 웅장한 예술. 인간 형상의 이상화.'},
+  {id:'medieval',label:'중세 미술',period:'400 ~ 1400 CE',y1:400,y2:1400,color:'#6B7280',bg:'#f8f9fa',border:'#6B7280',icon:'⛪',desc:'기독교 중심. 비잔틴·로마네스크·고딕 양식. 신을 향한 수직적 상승의 미학.'},
+  {id:'renaissance',label:'르네상스',period:'1400 ~ 1600 CE',y1:1400,y2:1600,color:'#D97706',bg:'#fffbf0',border:'#D97706',icon:'🎨',desc:'인간 중심의 부활. 원근법·해부학·자연주의의 혁명. 예술가가 장인에서 천재로.'},
+  {id:'baroque',label:'바로크·로코코',period:'1600 ~ 1800 CE',y1:1600,y2:1800,color:'#8B5CF6',bg:'#faf5ff',border:'#8B5CF6',icon:'✨',desc:'극적 명암·운동감·감각적 화려함. 카라바조의 빛, 렘브란트의 심리, 베르메르의 빛.'},
+  {id:'modern1',label:'근대 미술',period:'1800 ~ 1900 CE',y1:1800,y2:1900,color:'#10B981',bg:'#f0fdf4',border:'#10B981',icon:'🌅',desc:'낭만주의·사실주의·인상주의. 빛과 순간의 발견. 야외로 나간 화가들.'},
+  {id:'modern2',label:'현대 미술',period:'1900 ~ 1945 CE',y1:1900,y2:1945,color:'#3B82F6',bg:'#eff6ff',border:'#3B82F6',icon:'💥',desc:'입체주의·표현주의·초현실주의·추상. 예술의 폭발적 다양화. 무엇이든 예술이 될 수 있다.'},
+  {id:'contemporary',label:'현대·당대 미술',period:'1945 ~ 현재',y1:1945,y2:2030,color:'#EC4899',bg:'#fdf2f8',border:'#EC4899',icon:'🔲',desc:'팝아트·개념미술·설치미술·디지털. 예술의 경계 해체. 예술이란 무엇인가가 예술 그 자체.'},
+];
+const ART_EV=[
+  {y:-38000,era:'prehistoric',cat:'sculpture',t:`빌렌도르프의 비너스`,s:`오스트리아 발견 · 석회암 조각 · 약 BCE 28,000`,d:`풍요와 생산을 기원한 인류 최초의 조각상 중 하나.`,b:[`📅 약 기원전 28,000~25,000년 (구석기 시대)`,`🪨 재료: 석회암 · 높이 11.1cm · 붉은 황토 채색 흔적`,`💡 의의: 인류가 실용 외의 목적으로 만든 최초의 예술 작품 중 하나`,`💡 과장된 여성 신체 → 풍요·다산 상징. 어머니 여신 숭배의 증거`,`🔗 현재: 오스트리아 빈 자연사박물관 소장`],q:`우리는 이 조각을 만든 사람의 이름도 모른다.\n하지만 손끝에서 탄생한 것이 3만 년을 살아남았다.`},
+  {y:-17000,era:'prehistoric',cat:'painting',t:`라스코 동굴벽화`,s:`프랑스 도르도뉴 · 약 BCE 17,000년경`,d:`인류 최초의 채색 회화. 황소·말·사슴 600여 마리가 살아 움직이는 듯 그려졌다.`,b:[`📅 약 기원전 17,000년 (구석기 후기·마들렌 문화)`,`🖌 기법: 천연 안료(황토·망간·숯)로 바위면에 직접 채색. 음영·원근 사용`,`💡 1940년 소년 4명이 우연히 발견. 1963년 관광객 호흡으로 훼손 위기 → 폐쇄`,`💡 단순한 낙서가 아닌 체계적 구성. 인류의 예술적 사고 확립의 증거`,`🔗 UNESCO 세계유산. 현재 일반 출입 금지 — 완벽 복제본 라스코 IV 운영 중`],q:`기원전 1만 7천 년의 화가는 이름이 없다.\n그러나 그가 그린 말은 지금도 달린다.`},
+  {y:-8000,era:'prehistoric',cat:'architecture',t:`괴베클리 테페`,s:`터키 남동부 · BCE 10,000~8,000년경 · 세계 최초 신전`,d:`세계 최초의 신전. 농업 이전에 종교 건축이 먼저 등장했다.`,b:[`📅 기원전 10,000~8,000년경 — 신석기시대 초`,`🏗 T자형 석주(최대 높이 6m, 무게 20톤) 200개 이상. 동물 부조 장식`,`💡 정착 농경보다 2,000년 앞서 건설. 신전이 도시보다 앞선다`,`💡 의도적으로 매립·보존됨 — 이유는 미스터리`,`🔗 2018년 UNESCO 세계유산`],q:`집을 짓기 전에 신전을 지었다.\n인간은 밥보다 믿음이 먼저였다.`},
+  {y:-2560,era:'ancient',cat:'architecture',t:`기자 대피라미드·스핑크스`,s:`이집트 기자 · 파라오 쿠푸 · BCE 2560년경`,d:`인류 역사상 가장 거대한 무덤. 고대 세계 7대 불가사의 중 유일하게 현존.`,b:[`📅 기원전 2560년경 / 파라오 쿠푸(Khufu) 시대`,`🏗 높이 146.5m. 돌 230만 블록. 평균 무게 2.5톤`,`💡 건설 인력: 노예가 아닌 유급 노동자 약 2~3만 명. 숙소·의료 제공 기록 있음`,`💡 정밀도: 4면이 동서남북과 오차 0.05도`,`🔗 스핑크스: 높이 20m, 길이 73m`],q:`시간은 모든 것을 두려워한다.\n하지만 피라미드는 시간을 두려워하지 않는다.`},
+  {y:-447,era:'ancient',cat:'architecture',t:`파르테논 신전`,s:`그리스 아테네 · BCE 447~432 · 건축가 익티노스·칼리크라테스`,d:`서양 건축의 원형. 완벽한 비례의 도리스식 신전. 아테나 여신의 민주주의 상징.`,b:[`📅 기원전 447~432년 / 조각가 페이디아스 총괄`,`🏛 도리스식 기둥 46개. 착시 교정을 위해 기둥이 미세하게 안쪽으로 기움`,`💡 황금비(1:1.618)가 전체 비례에 적용`,`💡 아테나 여신상: 높이 12m, 상아와 금으로 제작 (현재 소실)`,`🔗 1687년 화약 창고로 쓰이다 폭발로 파괴. 현재 복원 진행 중`],q:`이 돌들은 2,500년 전에 깎인 것이다.\n우리는 아직도 그것을 아름답다고 부른다.`},
+  {y:-130,era:'ancient',cat:'sculpture',t:`밀로의 비너스`,s:`그리스 밀로섬 발견 · BCE 130~100년경 · 루브르 박물관`,d:`팔 없는 여신. 헬레니즘 조각의 완성. 서양이 이상화한 여성미의 원형.`,b:[`📅 기원전 130~100년경 / 파로스 대리석 · 높이 2.02m`,`💡 팔은 왜 없나? 1820년 발굴 당시 이미 소실. 한 손에 사과를 들었다는 설 有`,`💡 나폴레옹 전쟁 이후 프랑스가 루브르로 가져감`,`🔗 루브르 3대 걸작: 밀로의 비너스 · 모나리자 · 사모트라케의 니케`],q:`완전하지 않은 것이 때로 더 아름답다.`},
+  {y:80,era:'ancient',cat:'architecture',t:`로마 콜로세움`,s:`이탈리아 로마 · 72~80 CE · 베스파시아누스·티투스 황제`,d:`5만 명을 수용한 인류 최초의 대형 경기장. 로마 제국 권력과 공학의 상징.`,b:[`📅 72~80 CE / 베스파시아누스 황제 착공 · 티투스 황제 완공`,`🏗 높이 48m, 외주 527m, 수용 인원 5~8만 명`,`💡 현대 경기장의 원형: 번호 붙은 입구, 계층별 좌석 구분`,`💡 지하에 검투사·동물 대기실. 수압 엘리베이터로 무대에 등장`,`🔗 이탈리아 유로 동전에 새겨진 로마의 상징`],q:`빵과 서커스(Panem et Circenses)\n민중에게 먹을 것과 구경거리를 주어라. — 유베날리스`},
+  {y:537,era:'medieval',cat:'architecture',t:`하기아 소피아`,s:`터키 이스탄불 · 532~537 CE · 유스티니아누스 황제`,d:`비잔틴 건축의 정점. 1,000년간 세계 최대 성당. 현재는 모스크.`,b:[`📅 532~537 CE / 건축가 이시도루스·안테미우스`,`🏛 지름 31m 돔이 지면 55m 위에 떠 있는 것처럼 보임`,`💡 유스티니아누스: 솔로몬이여, 내가 그대를 뛰어넘었다`,`💡 1453년 오스만 정복 → 모스크. 2020년 다시 모스크로 전환`,`🔗 비잔틴 모자이크: 금박 배경에 성인 그림. 빛의 효과로 신성함 표현`],q:`우리가 천국에 있는지 지상에 있는지 알 수 없었다.\n— 블라디미르 공의 사절단, 988년`},
+  {y:1163,era:'medieval',cat:'architecture',t:`노트르담 대성당 (파리)`,s:`프랑스 파리 · 1163~1345 CE · 고딕 건축 걸작`,d:`고딕 건축의 걸작. 850년 파리의 하늘을 지킨 성당. 2019년 화재, 2024년 재개관.`,b:[`📅 1163년 착공 · 1345년경 완공 (182년 공사)`,`🏛 플라잉 버트레스(외부 공중 아치) → 얇은 벽 + 대형 스테인드글라스 가능`,`💡 장미창: 지름 13m의 원형 스테인드글라스. 빛이 성경을 이야기함`,`💡 2019년 4월 화재로 13세기 첨탑 붕괴. 2024년 12월 재개관`,`📌 빅토르 위고의 노트르담의 꼽추(1831)가 복원 여론을 만들었다`],q:`하나의 교회를 짓는 데 180년이 걸렸다.\n이것을 시작한 사람은 완성을 볼 수 없었다.`},
+  {y:1305,era:'medieval',cat:'painting',t:`조토 디 본도네 — 스크로베니 예배당`,s:`이탈리아 파도바 · 1304~1306 CE · 서양 회화의 아버지`,d:`황금 배경을 버리고 인물에 감정과 입체감을 부여한 혁명. 르네상스의 씨앗.`,b:[`📅 1304~1306년 / 조토 디 본도네(1267~1337)`,`🖌 프레스코 기법. 인물 얼굴에 슬픔·고뇌·기쁨을 표현`,`💡 혁명: 중세의 납작한 황금 배경 → 3차원 공간·자연광·심리 묘사로 전환`,`💡 단테가 신곡에서 회화의 영광은 조토에게 라고 언급`,`🔗 조토 → 마사초 → 레오나르도·미켈란젤로로 이어지는 혁명의 시작`],q:`조토는 자연을 스승으로 삼았다.\n이것이 모든 혁명의 시작이었다. — 바자리`},
+  {y:1485,era:'renaissance',cat:'painting',t:`보티첼리 — 비너스의 탄생`,s:`산드로 보티첼리 · 1484~1486 · 피렌체 우피치 미술관`,d:`르네상스 최초의 대형 나체화. 고대 신화의 부활. 메디치 가문의 주문작.`,b:[`📅 1484~1486년 / 산드로 보티첼리(1445~1510)`,`💡 신플라톤주의: 비너스는 신성한 사랑의 상징`,`💡 모델: 시모네타 베스푸치 — 로렌초 메디치의 연인으로 전해짐`,`🔗 봄(Primavera·1482)과 함께 보티첼리 최대 걸작 쌍작`],q:`이 그림은 사랑의 탄생이 아니라\n아름다움이 세상에 도착하는 순간이다.`},
+  {y:1498,era:'renaissance',cat:'painting',t:`레오나르도 다빈치 — 최후의 만찬`,s:`레오나르도 다빈치 · 1495~1498 · 밀라노 산타마리아 델레 그라치에`,d:`너희 중 하나가 나를 배신할 것. 12제자 각자의 심리를 포착한 서사시.`,b:[`📅 1495~1498년 / 레오나르도 다빈치(1452~1519)`,`💡 원근법: 배경의 모든 선이 예수의 얼굴로 수렴`,`💡 12제자의 심리: 손동작·표정·자세로 충격·부인·의심·분노를 표현`,`💡 나폴레옹이 그림 앞 벽에 문을 뚫어 하단 훼손`,`🔗 현재도 열화 진행 중`],q:`이 그림 앞에 서면 예수가 방금 말을 마쳤음을 느낀다.\n침묵이 들린다. — 괴테`},
+  {y:1504,era:'renaissance',cat:'sculpture',t:`미켈란젤로 — 다비드`,s:`미켈란젤로 · 1501~1504 · 피렌체 아카데미아 미술관`,d:`골리앗과 싸우기 직전의 다윗. 인간 신체의 완전한 아름다움. 피렌체 공화국의 상징.`,b:[`📅 1501~1504년 / 미켈란젤로(1475~1564) · 카라라 대리석 · 높이 5.17m`,`💡 26세의 미켈란젤로가 이전 예술가들의 미완성 대리석을 완성`,`💡 머리와 손이 실제보다 크게 — 아래에서 올려다볼 때 정확히 보이도록`,`💡 싸우기 직전의 순간: 근육 긴장, 경동맥 팽창`,`🔗 1873년 아카데미아 미술관으로 이전. 광장의 현재 상은 복제품`],q:`나는 이미 돌 안에 천사를 보았다.\n돌을 깎는 것은 그것을 자유롭게 하는 일이다. — 미켈란젤로`},
+  {y:1511,era:'renaissance',cat:'painting',t:`라파엘로 — 아테네 학당`,s:`라파엘로 산치오 · 1509~1511 · 바티칸 사도 궁전`,d:`고대 그리스의 모든 철학자를 한 화면에. 플라톤과 아리스토텔레스가 대화한다.`,b:[`📅 1509~1511년 / 라파엘로(1483~1520) · 프레스코 · 가로 7.7m`,`💡 플라톤(레오나르도 닮음) — 하늘 가리킴. 아리스토텔레스 — 땅 가리킴`,`💡 구석의 헤라클레이토스 = 미켈란젤로가 모델. 라파엘로 자신도 등장`,`🔗 르네상스 3거장: 레오나르도(경험)·미켈란젤로(에너지)·라파엘로(조화)`],q:`모든 철학은 플라톤의 주석이다.\n라파엘로는 그것을 그림으로 증명했다.`},
+  {y:1512,era:'renaissance',cat:'painting',t:`미켈란젤로 — 시스티나 성당 천장화`,s:`미켈란젤로 · 1508~1512 · 바티칸 시스티나 성당`,d:`4년간 누운 채로 완성한 창세기 9장면. 하느님과 아담의 손끝이 닿기 직전.`,b:[`📅 1508~1512년 / 프레스코 · 면적 520㎡`,`🖌 4년 내내 비계 위에 누워 작업`,`💡 아담의 창조: 손끝이 닿기 직전 — 서양 미술 최고의 순간`,`💡 33세에 시작. 300여 인물 완성`,`🔗 최후의 심판(1536~1541)도 추가 제작`],q:`그는 4년을 천장을 보며 누워 있었다.\n그리고 그 위에 인류의 기억을 새겼다.`},
+  {y:1519,era:'renaissance',cat:'painting',t:`레오나르도 다빈치 — 모나리자`,s:`레오나르도 다빈치 · 1503~1519경 · 루브르 박물관`,d:`세계에서 가장 유명한 그림. 스푸마토 기법, 수수께끼의 미소, 신비로운 배경.`,b:[`📅 1503~1519년경 (사망 시까지 수정) / 77×53cm`,`🖌 스푸마토(Sfumato): 연기처럼 경계를 흐리게`,`💡 1911년 루브르 직원이 도난 → 2년 후 회수. 이 사건으로 세계적 명성`,`💡 연간 900만 명 관람. 방탄유리 케이스 전시`,`🔗 루브르 3대 걸작 중 하나`],q:`그녀는 무언가를 알고 있다.\n우리는 그것을 영원히 알 수 없을 것이다.`},
+  {y:1600,era:'baroque',cat:'painting',t:`카라바조 — 명암 혁명 (키아로스쿠로)`,s:`미켈란젤로 메리시 다 카라바조 · 1600년경`,d:`극적인 명암대비. 성경 속 인물을 거리의 노동자로 그린 혁명가.`,b:[`📅 1598~1606년 대표작 / 카라바조(1571~1610)`,`🖌 키아로스쿠로(Chiaroscuro): 강렬한 빛과 극적인 어둠의 대비`,`💡 성인을 이상화된 영웅이 아닌 더러운 발을 가진 평범한 인간으로 묘사`,`💡 1606년 실제 살인을 저질러 도망자 신세가 됨`,`🔗 렘브란트·루벤스·벨라스케스 등 17세기 전체 회화를 지배`],q:`그는 빛과 어둠으로 신을 불렀다.\n신은 어둠 속에서 나타났다.`},
+  {y:1642,era:'baroque',cat:'painting',t:`렘브란트 — 야경 (The Night Watch)`,s:`렘브란트 판 레인 · 1642 · 암스테르담 국립미술관`,d:`정적인 집단 초상화를 역동적 서사로 바꾼 혁신. 빛·그림자·운동감의 완벽한 조합.`,b:[`📅 1642년 / 렘브란트 판 레인(1606~1669) · 363×437cm`,`🖌 암스테르담 민병대 18명 주문 → 렘브란트가 예술 작품으로 제작`,`💡 논란: 일부 인물이 가려져 주문자들 불만. 이후 초상화 주문 급감`,`💡 야경이란 이름은 오류 — 원래는 낮 장면`,`🔗 암스테르담 국립미술관 최고 소장품`],q:`그는 돈을 잃었다.\n하지만 그것이 렘브란트를 렘브란트로 만들었다.`},
+  {y:1665,era:'baroque',cat:'painting',t:`베르메르 — 진주 귀걸이를 한 소녀`,s:`요하네스 베르메르 · 1665경 · 마우리츠하위스 미술관 (헤이그)`,d:`북유럽의 모나리자. 빛과 소녀의 시선이 500년을 건너온다.`,b:[`📅 1665년경 / 요하네스 베르메르(1632~1675) · 44.5×39cm`,`🖌 빛이 한 방향에서 들어와 소녀의 피부를 감싸는 방식`,`💡 트로니(Tronie): 특정 인물이 아닌 상상 속 표정 연구 작품 장르`,`💡 2004년 무장 강도 도난 → 2006년 회수`,`🔗 트레이시 슈발리에의 소설(1999), 스칼렛 요한슨 주연 영화(2003)`],q:`그녀는 막 돌아본 것이다.\n아니면 막 돌아서려던 것일 수도 있다.`},
+  {y:1814,era:'modern1',cat:'painting',t:`고야 — 1808년 5월 3일`,s:`프란시스코 고야 · 1814 · 프라도 미술관 (마드리드)`,d:`나폴레옹 점령군의 민간인 학살. 역사상 최초의 반전 회화.`,b:[`📅 1814년 / 프란시스코 고야(1746~1828) · 268×347cm`,`🖌 피처형 조명. 흰 셔츠 남자에게 빛 집중 — 무고한 희생자의 강조`,`💡 전쟁화의 혁명: 승리·영웅이 아닌 공포와 무력함을 정직하게 그린 최초 작품`,`🔗 피카소의 게르니카(1937)의 직접 원천`],q:`공포는 색이 없다.\n그래서 그는 흰색으로 그렸다.`},
+  {y:1830,era:'modern1',cat:'painting',t:`들라크루아 — 민중을 이끄는 자유의 여신`,s:`외젠 들라크루아 · 1830 · 루브르 박물관`,d:`7월 혁명의 낭만주의 정점. 자유의 여신이 삼색기를 들고 바리케이드를 이끈다.`,b:[`📅 1830년 / 외젠 들라크루아(1798~1863) · 260×325cm`,`🖌 낭만주의: 이성 대신 감정·자유·열정. 역동적 구도, 강렬한 색채`,`💡 프랑스 마리안느(공화국의 인격화)의 원형이 됨`,`🔗 세잔·반 고흐가 근대 회화의 진정한 시조로 추앙`],q:`자유는 벌거벗었다.\n그래서 더 두려웠다.`},
+  {y:1863,era:'modern1',cat:'painting',t:`마네 — 풀밭 위의 점심 (근대 회화 원년)`,s:`에두아르 마네 · 1863 · 오르세 미술관 (파리)`,d:`낙선전의 스캔들. 나체의 여성과 양복 입은 신사들. 근대 회화의 기점.`,b:[`📅 1863년 / 에두아르 마네(1832~1883) · 208×264cm`,`💡 충격: 신화 속 여신이 아닌 현대 파리 여성이 관람자를 정면으로 응시`,`💡 마네는 인상주의의 직접 선배. 하지만 자신은 인상주의가 아니라고 함`,`💡 이 그림이 나온 1863년 = 근대 미술의 원년으로 불림`],q:`그녀가 우리를 바라보고 있다.\n이것이 불편한 이유는, 그녀가 우리를 알기 때문이다.`},
+  {y:1872,era:'modern1',cat:'painting',t:`모네 — 인상, 해돋이 (인상주의 탄생)`,s:`클로드 모네 · 1872 · 마르모탕 모네 미술관 (파리)`,d:`인상주의라는 이름의 기원. 빛의 순간을 포착하는 새로운 회화의 탄생.`,b:[`📅 1872년 / 클로드 모네(1840~1926) · 48×63cm`,`🖌 비평가 루이 르루아가 인상이라는 단어를 조롱으로 사용 → 화가들이 그대로 채택`,`💡 혁명: 완성된 그림 대신 순간의 인상을 캔버스에. 붓터치가 보이는 미완성의 아름다움`,`💡 인상주의: 야외 작업, 빠른 붓질, 보색 대비, 빛의 변화 포착`,`🔗 1874년 제1회 인상주의 전시회 → 근대 미술의 공식 출발점`],q:`태양은 매 순간 다른 색이다.\n나는 그 순간을 잡으려 한다. — 모네`},
+  {y:1886,era:'modern1',cat:'painting',t:`쇠라 — 그랑드 자트 섬의 일요일 오후 (점묘주의)`,s:`조르주 쇠라 · 1886 · 시카고 미술관`,d:`과학적으로 찍은 색점들이 망막에서 혼합된다. 신인상주의 점묘주의 탄생.`,b:[`📅 1886년 / 조르주 쇠라(1859~1891) · 207×308cm · 2년 작업`,`🖌 점묘주의(Pointillism): 순수 색점을 규칙적으로 찍어 관람자의 눈에서 혼합`,`💡 색채 분할론: 물감 혼합이 아닌 시각 혼합 — 더 밝고 순수한 색상 효과`,`🔗 이후 디지털 디스플레이의 픽셀(RGB)과 동일한 원리`],q:`예술은 조화다.\n조화는 색·색조·선의 대비와 유사성의 과학이다. — 쇠라`},
+  {y:1889,era:'modern1',cat:'painting',t:`반 고흐 — 별이 빛나는 밤`,s:`빈센트 반 고흐 · 1889 · 뉴욕 현대미술관(MoMA)`,d:`생레미 정신병원 창문의 밤하늘. 소용돌이치는 하늘이 내면의 감정을 표현한다.`,b:[`📅 1889년 6월 / 빈센트 반 고흐(1853~1890) · 73.7×92.1cm`,`🖌 생레미 정신병원 입원 중 제작. 창문 밖 실제 풍경 + 상상 추가`,`💡 소용돌이치는 하늘 = 격동하는 내면. 고요한 마을 = 평화에 대한 갈망`,`💡 생전 판매된 그림: 단 1점`,`🔗 고흐가 동생 테오에게 쓴 편지 650통 → 미술사 최고의 예술론`],q:`나는 꿈을 꾼다. 그래서 그린다.\n별들이 저렇게 빛날 때, 나는 삶을 꿈꾼다. — 반 고흐`},
+  {y:1893,era:'modern1',cat:'painting',t:`뭉크 — 절규`,s:`에드바르 뭉크 · 1893 · 노르웨이 국립미술관`,d:`공황 발작을 그린 가장 유명한 그림. 존재의 불안이 피와 하늘이 되었다.`,b:[`📅 1893년 (4가지 버전) / 에드바르 뭉크(1863~1944)`,`💭 뭉크 일기: 하늘이 핏빛으로 변했다... 자연을 꿰뚫는 무한한 비명을 들었다`,`💡 2012년 경매 1억 2천만 달러 (당시 회화 최고가)`,`🔗 표현주의·실존주의 미술의 원점. 20세기 불안의 아이콘`],q:`나는 비명을 들었다.\n그것이 내 것인지 세계의 것인지 알 수 없었다. — 뭉크`},
+  {y:1907,era:'modern2',cat:'painting',t:`피카소 — 아비뇽의 처녀들 (입체주의 탄생)`,s:`파블로 피카소 · 1907 · 뉴욕 현대미술관(MoMA)`,d:`르네상스 이래 500년간의 원근법을 폐기. 모든 각도를 동시에 보여주는 혁명.`,b:[`📅 1907년 / 파블로 피카소(1881~1973) · 243.9×233.7cm`,`💡 세잔의 기하학 + 아프리카·이베리아 가면 → 큐비즘(입체주의) 탄생`,`💡 단일 시점 원근법 500년 역사 폐기 → 모든 각도를 동시에 표현`,`🔗 1937년 게르니카: 스페인 내전 폭격 항의. 20세기 반전화의 최고 걸작`],q:`나는 보이는 것이 아니라 아는 것을 그린다. — 피카소`},
+  {y:1910,era:'modern2',cat:'painting',t:`칸딘스키 — 추상 회화의 탄생`,s:`바실리 칸딘스키 · 1910년경 · 뮌헨`,d:`음악처럼 형태·색채만으로 감정을 전달한다. 형상 없는 최초의 추상화.`,b:[`📅 1910년경 / 바실리 칸딘스키(1866~1944)`,`💡 계기: 자신의 그림이 거꾸로 세워져 있는 것을 보고 깨달음`,`💡 색채가 건반이다. 눈이 망치다. 영혼이 피아노다`,`🔗 바우하우스 교수(1922~1933). 나치에 의해 퇴직`],q:`색채는 건반이다. 눈이 망치다. 영혼은 피아노다. — 칸딘스키`},
+  {y:1917,era:'modern2',cat:'sculpture',t:`뒤샹 — 샘 (레디메이드의 탄생)`,s:`마르셀 뒤샹 · 1917 · 다다이즘`,d:`소변기 하나를 예술이라고 제출했다. 예술이란 무엇인가 가 그 자체로 예술이 됐다.`,b:[`📅 1917년 / 마르셀 뒤샹(1887~1968) · 도자기 소변기에 'R.Mutt 1917' 서명`,`💡 레디메이드(Readymade): 기성품을 예술로 전환. 선택이 예술 행위`,`💡 2004년 미술계 설문: 20세기 가장 영향력 있는 작품 1위`,`🔗 다다이즘 → 개념미술 → 팝아트 → 현대 설치미술의 직접 조상`],q:`내가 소변기를 예술이라 말하면 예술이다.\n예술은 망막이 아닌 정신의 문제다. — 뒤샹`},
+  {y:1931,era:'modern2',cat:'painting',t:`살바도르 달리 — 기억의 지속`,s:`살바도르 달리 · 1931 · 뉴욕 현대미술관(MoMA)`,d:`녹아내리는 시계들. 꿈과 무의식을 극사실주의 기법으로 묘사한 초현실주의 대표작.`,b:[`📅 1931년 / 살바도르 달리(1904~1989) · 24.1×33cm (우표 크기!)`,`💡 초현실주의(Surrealism): 프로이트의 무의식 이론을 시각화`,`💡 달리는 카망베르 치즈 보고 영감 주장`,`🔗 마그리트 이것은 파이프가 아니다(1929)와 함께 초현실주의 쌍벽`],q:`나와 광인의 차이는 단 하나다.\n나는 미치지 않았다. — 달리`},
+  {y:1937,era:'modern2',cat:'painting',t:`피카소 — 게르니카`,s:`파블로 피카소 · 1937 · 마드리드 레이나 소피아 미술관`,d:`스페인 내전 나치 독일의 폭격. 20세기 최대의 반전 회화.`,b:[`📅 1937년 / 349×776cm · 흑백만 사용: 색채 없음 = 생의 부재`,`💡 제작 과정: 사건 이후 6주 만에 완성. 45장 스케치 공개`,`💡 황소=잔혹함, 말=고통받는 민중, 전등=감시의 눈`,`🔗 피카소: 이 그림을 스페인의 자유가 회복될 때까지 내가 지킨다`],q:`회화는 아파트를 꾸미기 위한 것이 아니다.\n적과 싸우는 공격·방어의 무기다. — 피카소`},
+  {y:1948,era:'contemporary',cat:'painting',t:`잭슨 폴록 — 드리핑 (액션 페인팅)`,s:`잭슨 폴록 · 1947~1950 · 뉴욕 추상표현주의`,d:`바닥에 캔버스를 놓고 물감을 뿌리고 흘린다. 과정 자체가 예술이 되는 행위 회화.`,b:[`📅 1947~1950년 전성기 / 잭슨 폴록(1912~1956)`,`💡 드리핑(Dripping): 붓을 캔버스에 대지 않고 물감을 흘리거나 던지며 제작`,`💡 이젤을 버리고 바닥에 캔버스. 신체 전체로 그림 안에 들어가 춤추듯 제작`,`🔗 마크 로스코·빌럼 드 쿠닝과 함께 미국 추상표현주의 3대 거장`],q:`그림을 바라볼 때, 나는 그림 안에 있다.\n나는 그림이 어디로 가는지 모른다. — 폴록`},
+  {y:1962,era:'contemporary',cat:'painting',t:`앤디 워홀 — 마릴린·캠벨 수프 캔 (팝아트)`,s:`앤디 워홀 · 1962 · 뉴욕 · 팝아트 선언`,d:`대중문화와 상업이미지를 예술로. 예술과 삶의 경계를 지워라.`,b:[`📅 1962년 / 앤디 워홀(1928~1987) · 실크스크린 인쇄`,`💡 팝아트: 광고·만화·영화스타를 미술관으로. 고급예술과 저급문화 경계 해체`,`💡 마릴린: 먼로 사망(1962.8.5) 직후 제작. 반복 = 스타의 복제·상품화`,`🔗 로이 리히텐슈타인·재스퍼 존스와 함께 팝아트 3대 거장`],q:`미래에는 누구나 15분간 유명해질 것이다. — 워홀`},
+  {y:1993,era:'contemporary',cat:'installation',t:`데미안 허스트 — 현대 설치미술`,s:`데미안 허스트·제프 쿤스 · 1980~1990년대`,d:`예술은 물건이 아니라 아이디어다. 자본·죽음·욕망을 직접 전시한다.`,b:[`💡 데미안 허스트: 포름알데히드에 담근 상어(1991). 죽음의 물리적 불가능성`,`💡 제프 쿤스: 강아지 풍선 조각. 키치(kitsch)를 고급예술로 끌어올림`,`💡 개념미술: 작품 자체보다 아이디어·과정·맥락이 예술`,`🔗 이 시기부터 현대미술이 왜 이걸 예술이라 하는가가 미술의 중심 질문`],q:`예술은 질문이다.\n답이 되는 순간 예술이 아니다.`},
+  {y:2010,era:'contemporary',cat:'street',t:`뱅크시·NFT·AI — 경계 없는 예술`,s:`뱅크시(정체불명) · 1990년대~현재 · 디지털 미술 시대`,d:`신원 미상의 예술가가 전 세계 벽에 메시지를 남긴다. NFT·AI 미술로 예술의 정의가 다시 흔들린다.`,b:[`📅 1990년대~ / 뱅크시(Banksy) · 스텐실 그래피티 · 정체 미공개`,`💡 2018년 소더비 경매 낙찰 직후 액자 속 분쇄기 작동 → 분쇄된 사랑으로 재경매 1,850만 달러`,`💡 NFT 미술(2021): 비플의 매일: 첫 5000일 → 6,930만 달러 (크리스티 경매)`,`🔗 AI 생성 미술·메타버스 갤러리 등 예술의 정의가 다시 흔들리는 시대`],q:`예술은 우리가 당연하다고 여기는 것에\n불편한 질문을 던지는 행위다.`},
+];
+const CAT_LABEL={painting:'🖼 회화',sculpture:'🗿 조각',architecture:'🏗 건축',installation:'💡 설치·개념',street:'🎭 거리·디지털'};
+const DOT_COLOR={painting:'#d4a030',sculpture:'#9060d0',architecture:'#30a060',installation:'#3080d0',street:'#d030a0'};
+
+let artPanelInited=false;
+function initArtPanel(){
+  if(artPanelInited)return;
+  artPanelInited=true;
+  const body=document.getElementById('artBody');
+  if(!body)return;
+  const sorted=[...ART_EV].sort((a,b)=>a.y-b.y);
+  let html='',prevEra=null;
+  sorted.forEach(ev=>{
+    const era=ART_ERAS.find(r=>ev.era===r.id);
+    if(era&&era.id!==prevEra){
+      prevEra=era.id;
+      html+=`<div class="art-era-band" onclick="this.classList.toggle('open')" style="background:${era.color}10;border-color:${era.color}40">
+        <div class="art-era-inner">
+          <div class="art-era-left" style="background:${era.color}18">${era.icon}</div>
+          <div class="art-era-right">
+            <div class="art-era-name" style="color:${era.color}">${era.label}</div>
+            <div class="art-era-period" style="color:${era.color}">${era.period}</div>
+            <div class="art-era-hint" style="font-size:9.5px;opacity:.55;margin-top:2px;color:${era.color}">▼ 탭하면 시대 설명</div>
+            <div class="art-era-desc" style="color:${era.color}">${era.desc}</div>
+          </div>
+        </div></div>`;
+    }
+    const dot=DOT_COLOR[ev.cat]||'#d4a030';
+    const dotBg=era?era.bg:'#fffbf0';
+    const catL=CAT_LABEL[ev.cat]||ev.cat;
+    const idx=ART_EV.indexOf(ev);
+    const yr=ev.y<=-1000?`BCE ${Math.abs(ev.y).toLocaleString()}`:ev.y<0?`기원전 ${Math.abs(ev.y)}`:ev.y+'년';
+    html+=`<div class="art-row">
+      <div class="art-yr">${yr}</div>
+      <div class="art-dot"><div class="art-dot-i" style="border-color:${dot};background:${dotBg}"></div></div>
+      <div class="art-card art-cat-${ev.cat}" onclick="openArtMo(${idx})">
+        <div class="art-card-cat">${catL}</div>
+        <div class="art-card-title">${ev.t}</div>
+        <div class="art-card-sub">${ev.s}</div>
+        <div class="art-card-desc">${ev.d}</div>
+        <div class="art-card-hint">📖 탭하면 상세 보기</div>
+      </div></div>`;
+  });
+  body.innerHTML=html;
+}
+
+function openArtMo(idx){
+  const ev=ART_EV[idx];if(!ev)return;
+  const era=ART_ERAS.find(r=>ev.era===r.id);
+  const catL=CAT_LABEL[ev.cat]||ev.cat;
+  const col=era?era.color:'#d4a030';
+  const bg=era?era.bg:'#fffbf0';
+  const yr=ev.y<=-1000?`BCE ${Math.abs(ev.y).toLocaleString()}`:ev.y<0?`기원전 ${Math.abs(ev.y)}년`:ev.y+'년';
+  let h=`<div class="mo-cat-badge" style="background:${col};color:#fff">${era?era.icon:''} ${catL}</div>`;
+  h+=`<div class="mo-yr">${yr}</div>`;
+  h+=`<div class="mo-title" style="color:#1a1a1a">${ev.t}</div>`;
+  if(ev.s)h+=`<div class="mo-sub">${ev.s}</div>`;
+  if(ev.d)h+=`<div style="font-size:13px;color:#1e1e1e;padding:8px 14px 10px;background:${col}0f;border-left:4px solid ${col};margin:0 12px 12px;border-radius:0 8px 8px 0;line-height:1.7;font-weight:500">${ev.d}</div>`;
+  if(ev.q)h+=`<div class="mo-quote">${ev.q}</div>`;
+  if(ev.b&&ev.b.length){h+='<div class="mo-bullets">';ev.b.forEach(b=>{h+=`<div class="mo-b">${b}</div>`;});h+='</div>';}
+  document.getElementById('moBody').innerHTML=h;
+  document.getElementById('moOv').classList.add('on');
+  document.body.style.overflow='hidden';
+}
+
+// 기본 탭 초기화
+(function(){
+  const firstBtn=document.querySelector('.ftab');
+  if(firstBtn) switchTab('civ',firstBtn);
+})();
+</script>
+</body>
+</html>
